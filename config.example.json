@@ -1,0 +1,10 @@
+{
+  "channels": [],
+  "replace_messages": false,
+  "role_policy": {"viewer": [], "moderator": [], "admin": []},
+  "data_dir": "data",
+  "naming": "original",
+  "folder_per_channel": false,
+  "logs_channel_id": 0,
+  "max_attachment_bytes": 25000000
+}

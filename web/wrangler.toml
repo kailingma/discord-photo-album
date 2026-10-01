@@ -1,0 +1,18 @@
+name = "nova-photo-album"
+main = "app.js"
+compatibility_date = "2026-09-29"
+# Use existing dashboard bindings, isolated album/ R2 prefix and album table.
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "nova-dashboard-files"
+[[d1_databases]]
+binding = "DB"
+database_name = "nova-dashboard"
+database_id = "82a1a146-d21d-4a11-9664-ce648c7b57f9"
+[vars]
+PUBLIC_URL = "https://dpa.klem.ca"
+# No CI, routes or deploy automation. Set domain explicitly before deploying.
+[[routes]]
+pattern = "dpa.klem.ca"
+custom_domain = true
+zone_name = "klem.ca"
