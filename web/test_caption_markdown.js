@@ -38,6 +38,10 @@ r=await run('2 * 3 * 4');assert.equal(r.html,'2 * 3 * 4');
 r=await run('snake_case_words stay');assert.equal(r.html,'snake_case_words stay');
 r=await run('**half');assert.equal(r.html,'**half');
 r=await run('****');assert.equal(r.html,'****');
+// Combined bold-italic renders like Discord; unclosed stays literal
+r=await run('***bi***');assert.equal(r.html,'<b><i>bi</i></b>');
+r=await run('***unclosed');assert.equal(r.html,'***unclosed');
+r=await run('***a **b** c***');assert.equal(r.html,'<b><i>a <b>b</b> c</i></b>');
 // Nesting: trailing marker literal, underline-inside-bold nests
 r=await run('**bold *it***');assert.equal(r.html,'<b>bold *it</b>*');
 r=await run('**bold _it_**');assert.equal(r.html,'<b>bold <i>it</i></b>');
