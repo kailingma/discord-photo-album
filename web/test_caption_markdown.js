@@ -28,4 +28,35 @@ r=await run('see <#9>');assert(r.html.includes('#unknown channel'),r.html);asser
 r=await run('<@abc> <@> <!@5> <@5');assert(!r.html.includes('mention'),r.html);
 // Mixed mention + link in one caption
 r=await run('<@5> shared [photos](https://example.com)');assert(r.html.includes('@KaiM')&&r.html.includes('<a href='));assert.equal(r.plain,'@KaiM shared photos');
-console.log('Caption Markdown link allowlist, escaping, malformed/nested rejection and mention rendering tests passed');
+// Inline styles: bold/italic/underline/strikethrough/inline-code
+r=await run('**bold** and *it* and __u__ and ~~s~~');assert.equal(r.html,'<b>bold</b> and <i>it</i> and <u>u</u> and <s>s</s>');assert.equal(r.plain,'bold and it and u and s');
+r=await run('use `x<y` here');assert(r.html.includes('<code class=md-inline>x&lt;y</code>'),r.html);assert.equal(r.plain,'use x<y here');
+// Spoilers render as a real button with aria-expanded, never inline handlers (CSP-safe)
+r=await run('hide ||secret|| now');assert(r.html.includes('<button type=button class=spoiler aria-expanded="false">secret</button>'),r.html);assert(!r.html.includes('onclick'));assert.equal(r.plain,'hide secret now');
+// Unmatched and mid-word markers stay literal
+r=await run('2 * 3 * 4');assert.equal(r.html,'2 * 3 * 4');
+r=await run('snake_case_words stay');assert.equal(r.html,'snake_case_words stay');
+r=await run('**half');assert.equal(r.html,'**half');
+r=await run('****');assert.equal(r.html,'****');
+// Nesting: trailing marker literal, underline-inside-bold nests
+r=await run('**bold *it***');assert.equal(r.html,'<b>bold *it</b>*');
+r=await run('**bold _it_**');assert.equal(r.html,'<b>bold <i>it</i></b>');
+// Styles never span link boundaries: wrapping marks stay literal around the anchor
+r=await run('**[x](https://ok.example)**');assert(r.html.startsWith('**<a href="https://ok.example/')&&r.html.endsWith('</a>**'),r.html);assert(!r.html.includes('<b>'));assert(r.plain.includes('**'),r.plain);
+// Fenced code blocks: paired fences render pre/code, content is escaped and never styled
+r=await run('```js\nlet a=1;\n```');assert.equal(r.block,true);assert.equal(r.html,'<pre class=md-code><code>let a=1;</code></pre>');assert.equal(r.plain,'let a=1;');
+r=await run('```\n<b> & **not bold**\n```');assert(r.html.includes('&lt;b&gt; &amp; **not bold**'),r.html);assert(!r.html.includes('<b>'));
+// Unclosed fences stay literal
+r=await run('```\nx');assert.equal(r.block,false);assert(r.html.includes('```<br>x'),r.html);
+// Quotes, lists, headings, subtext become real blocks; inline styles work inside them
+r=await run('> hello\n> **world**');assert.equal(r.html,'<blockquote class=md-q>hello<br><b>world</b></blockquote>');assert.equal(r.block,true);
+r=await run('- a\n- b');assert.equal(r.html,'<ul class=md-list><li>a</li><li>b</li></ul>');assert.equal(r.block,true);
+r=await run('# Title');assert.equal(r.html,'<div class=md-h1>Title</div>');
+r=await run('## Two');assert.equal(r.html,'<div class=md-h2>Two</div>');
+r=await run('#### four');assert.equal(r.html,'#### four');
+r=await run('-# small');assert.equal(r.html,'<div class=md-sub>small</div>');
+// Mixed caption: block flag set, plain text joins blocks with newlines, text chunks keep <br>
+r=await run('# T\nbody\ntext');assert.equal(r.block,true);assert.equal(r.plain,'T\nbody\ntext');assert(r.html.includes('<div class=md-h1>T</div>body\ntext')||r.html.includes('body<br>text')||r.html.includes('body\ntext'),r.html);
+// Plain single-line caption keeps block=false so existing <p>/<h2> wrappers are untouched
+r=await run('just words');assert.equal(r.block,false);
+console.log('Caption Markdown link allowlist, escaping, malformed/nested rejection, mention rendering, inline styles, spoilers and block syntax tests passed');
