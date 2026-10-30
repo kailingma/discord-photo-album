@@ -84,11 +84,24 @@ async function discordAttachment(e,rec){
 }
 async function canShare(r,e,ch){return ch&&await allowed(r,e,ch)}
 function shareDialog(){return `<dialog id=share-dialog aria-label="Share media"><div class=modalbar><h2>Share</h2><button class=action data-close-share aria-label="Close share">${icons.x}</button></div><p><label><input type=checkbox name=gallery> Allow access to the entire gallery</label></p><button class=action data-create-share>${icons.link} Show link</button><p><input data-share-link readonly aria-label="Share link" style="width:100%"></p><button class=action data-copy-share>${icons.copy} Copy link</button><p data-share-status role=status></p></dialog>`}
-async function captionDisplay(e,rec,cache){
+export async function captionDisplay(e,rec,cache){
  const raw=rec.caption||rec.original||'',guild=rec.guild_id;let plain='',html='',last=0;
- const matches=[...raw.matchAll(/<(@!?|@&|#)(\d+)>/g)];
+ // One pass over Discord mentions and Markdown links; all other text stays literal and escaped.
+ const matches=[...raw.matchAll(/<(@!?|@&|#)(\d+)>|\[([^\]\n]+)\]\(\s*(?:<([^>\n]+)>|([^)\s]+))\s*\)/g)];
  for(const m of matches){
   const before=raw.slice(last,m.index);plain+=before;html+=esc(before);
+  if(m[1]===undefined){
+   // Markdown link. Reject control/whitespace-bearing or unparseable destinations outright; never strip-to-launder.
+   const text=m[3],candidate=m[4]??m[5]??'';let href=null;
+   // <> form may hold spaces (percent-encoded by the parser); bare form may hold none. Control characters are never stripped or tolerated in either.
+   const badchars=m[4]?/[\x00-\x1f\x7f]/:/[\x00-\x20\x7f]/;
+   if(candidate&&!badchars.test(candidate)){
+    try{const u=new URL(candidate);if(['https:','http:','mailto:'].includes(u.protocol))href=u.href}catch{}
+   }
+   if(href){plain+=text;html+=`<a href="${esc(href)}" target=_blank rel="noopener noreferrer">${esc(text)}</a>`}
+   else{plain+=m[0];html+=esc(m[0])}
+   last=m.index+m[0].length;continue;
+  }
   const type=m[1]==='@&'?'role':m[1]==='#'?'channel':'user',id=m[2],key=guild+':'+type+':'+id;
   if(!cache.has(key))cache.set(key,(async()=>{
    try{
