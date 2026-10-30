@@ -296,7 +296,8 @@ class PhotoBot(discord.Client):
                     if not current or ch.id not in current['channels']:raise ValueError('Channel no longer watched')
                     previous=self.cfg;self.cfg=current;self.arch.config=current
                     try:
-                        if m.author.id!=self.user.id:
+                        # Same author gate as live watching: bot and webhook posts (including this archiver's own reposts) are never archived, so a reindex cannot duplicate a replaced photo.
+                        if not m.author.bot and not m.webhook_id:
                             saved,issues=await self.archive_only(m)
                             report['saved']=report.get('saved',0)+saved
                             report['unresolved']=report.get('unresolved',0)+len(issues)
@@ -363,4 +364,3 @@ async def main():
         except discord.LoginFailure:print('Discord rejected token',flush=True)
         finally:await bot.close()
 if __name__=='__main__':asyncio.run(main())
-
